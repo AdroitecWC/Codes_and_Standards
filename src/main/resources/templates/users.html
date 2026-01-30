@@ -20,6 +20,9 @@
             padding: 0;
             padding-top: 70px;
         }
+        .main-content {
+    position: relative;
+}
 
         /* ==================== STATISTICS CARDS ==================== */
         .stat-card {
@@ -112,40 +115,38 @@
         }
 
         /* ==================== MODAL OVERLAY ==================== */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 9998;
-        }
-        .modal-overlay.active {
-            display: block;
-        }
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 9998;
+}
+.modal-overlay.active {
+    display: block;
+}
 
         /* ==================== USER DETAILS MODAL ==================== */
         .user-details-modal {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            width: 90%;
-            max-width: 500px;
-            z-index: 9999;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-        .user-details-modal.active {
-            display: block;
-        }
+    display: none;
+    position: fixed;
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    width: 90%;
+    max-width: 500px;
+    z-index: 9999;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    max-height: 80vh;
+    overflow-y: auto;
+    transition: all 0.3s ease; /* Smooth transition when sidebar toggles */
+}
+.user-details-modal.active {
+    display: block;
+}
         .modal-header-custom {
             display: flex;
             justify-content: space-between;
@@ -803,7 +804,48 @@
     let editEmailCheckTimeout = null;
     let originalEmail = '';
     let allGroups = [];
+    // ==================== CENTER MODAL TO MAIN CONTENT ====================
+    function centerModalToMainContent() {
+        const modal = document.getElementById('userDetailsModal');
+        const mainContent = document.querySelector('.main-content');
 
+        if (!modal || !mainContent) return;
+
+        // Get main-content dimensions and position
+        const mainRect = mainContent.getBoundingClientRect();
+
+        // Calculate center position relative to main-content
+        const modalWidth = modal.offsetWidth;
+        const modalHeight = modal.offsetHeight;
+
+        // Center horizontally within main-content
+        const left = mainRect.left + (mainRect.width / 2) - (modalWidth / 2);
+
+        // Center vertically within viewport (but considering navbar)
+        const top = window.innerHeight / 2 - modalHeight / 2;
+
+        modal.style.left = `${left}px`;
+        modal.style.top = `${top}px`;
+        modal.style.transform = 'none'; // Remove transform since we're using absolute positioning
+    }
+    function closeUserModal() {
+    const modal = document.getElementById('userDetailsModal');
+    const overlay = document.getElementById('modalOverlay');
+
+    if (modal) {
+        modal.classList.remove('active');
+        // Reset inline styles
+        modal.style.left = '';
+        modal.style.top = '';
+        modal.style.transform = '';
+    }
+
+    if (overlay) {
+        overlay.classList.remove('active');
+    }
+
+    console.log('✅ User modal closed');
+}
     // ==================== INITIALIZATION ====================
     document.addEventListener('DOMContentLoaded', function() {
         fetchGroups();
@@ -976,6 +1018,7 @@
             });
         }
 
+
         const editUserForm = document.getElementById('editForm');
         if (editUserForm) {
             editUserForm.addEventListener('submit', function(e) {
@@ -998,7 +1041,29 @@
             });
         }
 
+
         formatAllDates();
+        // ✅ ADD THIS: Re-center modal when window resizes or sidebar toggles
+        window.addEventListener('resize', function() {
+            const modal = document.getElementById('userDetailsModal');
+            if (modal && modal.classList.contains('active')) {
+                centerModalToMainContent();
+            }
+        });
+
+        // ✅ ADD THIS: Listen for sidebar toggle events
+        const sidebarToggle = document.querySelector('[data-bs-toggle="offcanvas"]');
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', function() {
+                // Wait for sidebar animation to complete
+                setTimeout(() => {
+                    const modal = document.getElementById('userDetailsModal');
+                    if (modal && modal.classList.contains('active')) {
+                        centerModalToMainContent();
+                    }
+                }, 350); // Match Bootstrap's offcanvas transition duration
+            });
+        }
     });
 
     // ==================== GROUPS FUNCTIONALITY ====================
@@ -1397,6 +1462,11 @@
         modal.classList.add('active');
         overlay.classList.add('active');
 
+        // ✅ Center modal after showing it
+        setTimeout(() => {
+            centerModalToMainContent();
+        }, 10);
+
         content.innerHTML = '<div class="text-center py-4"><div class="loading-spinner"></div><p class="mt-2">Loading user details...</p></div>';
 
         fetch(contextPath + `apis/users/${userId}`)
@@ -1421,54 +1491,54 @@
                     });
                 }
 
-                    let roleName = user.roleName || 'N/A';
-    // ✅ ADD THIS: Format groups for display
-    let groupsHtml = '<span class="text-muted">No groups assigned</span>';
-    if (user.groups && user.groups.length > 0) {
-        groupsHtml = user.groups.map(group =>
-            `<span class="badge rounded-pill" style="background-color: #d1fae5; color: #065f46; margin-right: 4px; margin-bottom: 4px; padding: 6px 12px; font-size: 11px;">${group.groupName}</span>`
-        ).join('');
-    }
+                let roleName = user.roleName || 'N/A';
+                let groupsHtml = '<span class="text-muted">No groups assigned</span>';
+                if (user.groups && user.groups.length > 0) {
+                    groupsHtml = user.groups.map(group =>
+                        `<span class="badge rounded-pill" style="background-color: #d1fae5; color: #065f46; margin-right: 4px; margin-bottom: 4px; padding: 6px 12px; font-size: 11px;">${group.groupName}</span>`
+                    ).join('');
+                }
 
-    content.innerHTML = `
-<!--        <div class="user-detail-row">-->
-<!--            <div class="user-detail-label">User ID:</div>-->
-<!--            <div class="user-detail-value">${user.id || 'N/A'}</div>-->
-<!--        </div>-->
-        <div class="user-detail-row">
-            <div class="user-detail-label">First Name:</div>
-            <div class="user-detail-value">${user.firstName || 'N/A'}</div>
-        </div>
-        <div class="user-detail-row">
-            <div class="user-detail-label">Last Name:</div>
-            <div class="user-detail-value">${user.lastName || 'N/A'}</div>
-        </div>
-        <div class="user-detail-row">
-            <div class="user-detail-label">Username:</div>
-            <div class="user-detail-value">${user.username || 'N/A'}</div>
-        </div>
-        <div class="user-detail-row">
-            <div class="user-detail-label">Email:</div>
-            <div class="user-detail-value">${user.email || 'N/A'}</div>
-        </div>
-        <div class="user-detail-row">
-            <div class="user-detail-label">Role:</div>
-            <div class="user-detail-value"><span class="role-pill">${roleName}</span></div>
-        </div>
-        <div class="user-detail-row">
-             <div class="user-detail-label">Groups:</div>
-             <div class="user-detail-value">${groupsHtml}</div>
-        </div>
-        <div class="user-detail-row">
-            <div class="user-detail-label">Created At:</div>
-            <div class="user-detail-value">${createdDate}</div>
-        </div>
-        <div class="user-detail-row" style="border-bottom: none;">
-            <div class="user-detail-label">Created By:</div>
-            <div class="user-detail-value">${user.createdByUsername || 'System'}</div>
-        </div>
-    `;
-})
+                content.innerHTML = `
+            <div class="user-detail-row">
+                <div class="user-detail-label">First Name:</div>
+                <div class="user-detail-value">${user.firstName || 'N/A'}</div>
+            </div>
+            <div class="user-detail-row">
+                <div class="user-detail-label">Last Name:</div>
+                <div class="user-detail-value">${user.lastName || 'N/A'}</div>
+            </div>
+            <div class="user-detail-row">
+                <div class="user-detail-label">Username:</div>
+                <div class="user-detail-value">${user.username || 'N/A'}</div>
+            </div>
+            <div class="user-detail-row">
+                <div class="user-detail-label">Email:</div>
+                <div class="user-detail-value">${user.email || 'N/A'}</div>
+            </div>
+            <div class="user-detail-row">
+                <div class="user-detail-label">Role:</div>
+                <div class="user-detail-value"><span class="role-pill">${roleName}</span></div>
+            </div>
+            <div class="user-detail-row">
+                 <div class="user-detail-label">Groups:</div>
+                 <div class="user-detail-value">${groupsHtml}</div>
+            </div>
+            <div class="user-detail-row">
+                <div class="user-detail-label">Created At:</div>
+                <div class="user-detail-value">${createdDate}</div>
+            </div>
+            <div class="user-detail-row" style="border-bottom: none;">
+                <div class="user-detail-label">Created By:</div>
+                <div class="user-detail-value">${user.createdByUsername || 'System'}</div>
+            </div>
+        `;
+
+                // ✅ Re-center after content loads (height may change)
+                setTimeout(() => {
+                    centerModalToMainContent();
+                }, 10);
+            })
             .catch(error => {
                 content.innerHTML = `
                     <div class="alert alert-danger">
@@ -1476,12 +1546,12 @@
                         Failed to load user details. ${error.message}
                     </div>
                 `;
-            });
-    }
 
-    function closeUserModal() {
-        document.getElementById('userDetailsModal').classList.remove('active');
-        document.getElementById('modalOverlay').classList.remove('active');
+                // ✅ Re-center after error message loads
+                setTimeout(() => {
+                    centerModalToMainContent();
+                }, 10);
+            });
     }
 
     // ==================== TABLE FILTERING ====================
